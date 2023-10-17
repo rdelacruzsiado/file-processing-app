@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { Readable } from 'stream';
 
 import { FileProcessingService } from './file-processing.service';
 import { ForReadingFiles } from '../ports/drivens';
@@ -6,6 +7,19 @@ import { ForReadingFiles } from '../ports/drivens';
 describe('FileProcessingService', () => {
   let fileProcessingService: FileProcessingService;
   let mockForReadingFiles: ForReadingFiles;
+
+  const mockFile: Express.Multer.File = {
+    fieldname: 'file',
+    originalname: 'example.txt',
+    encoding: '7bit',
+    mimetype: 'text/plain',
+    destination: '/tmp',
+    filename: 'example.txt',
+    path: '/tmp/example.txt',
+    size: 1024,
+    buffer: Buffer.from('Contenido de ejemplo'),
+    stream: new Readable(),
+  };
 
   beforeEach(async () => {
     mockForReadingFiles = {
@@ -26,48 +40,44 @@ describe('FileProcessingService', () => {
 
   describe('countWordsInFile', () => {
     it('should count words in a file', async () => {
-      const filePath = 'test.txt';
       const fileContent = 'This is a test file.';
 
       jest
         .spyOn(mockForReadingFiles, 'readFile')
         .mockResolvedValue(fileContent);
 
-      const result = await fileProcessingService.countWordsInFile(filePath);
+      const result = await fileProcessingService.countWordsInFile(mockFile);
 
-      expect(result).toBe(5);
+      expect(result.numberOfWords).toBe(5);
     });
 
     it('avoid to count punctuation marks', async () => {
-      const filePath = 'test.txt';
       const fileContent = 'This is a test file. @ . ! ?';
 
       jest
         .spyOn(mockForReadingFiles, 'readFile')
         .mockResolvedValue(fileContent);
 
-      const result = await fileProcessingService.countWordsInFile(filePath);
+      const result = await fileProcessingService.countWordsInFile(mockFile);
 
-      expect(result).toBe(5);
+      expect(result.numberOfWords).toBe(5);
     });
 
     it('File void should return 0', async () => {
-      const filePath = 'test.txt';
       const fileContent = '';
 
       jest
         .spyOn(mockForReadingFiles, 'readFile')
         .mockResolvedValue(fileContent);
 
-      const result = await fileProcessingService.countWordsInFile(filePath);
+      const result = await fileProcessingService.countWordsInFile(mockFile);
 
-      expect(result).toBe(0);
+      expect(result.numberOfWords).toBe(0);
     });
   });
 
   describe('findWordInFile', () => {
     it('should find a word in a file', async () => {
-      const filePath = 'test.txt';
       const wordToFind = 'test';
       const fileContent = 'This is a test file.';
 
@@ -77,14 +87,13 @@ describe('FileProcessingService', () => {
 
       const result = await fileProcessingService.findWordInFile(
         wordToFind,
-        filePath,
+        mockFile,
       );
 
-      expect(result).toBe(true);
+      expect(result.found).toBe(true);
     });
 
     it('find a word even with capital or lowercase', async () => {
-      const filePath = 'test.txt';
       const wordToFind = 'Test';
       const fileContent = 'This is a teSt file.';
 
@@ -94,14 +103,13 @@ describe('FileProcessingService', () => {
 
       const result = await fileProcessingService.findWordInFile(
         wordToFind,
-        filePath,
+        mockFile,
       );
 
-      expect(result).toBe(true);
+      expect(result.found).toBe(true);
     });
 
     it('should not find a word in a file', async () => {
-      const filePath = 'test.txt';
       const wordToFind = 'example';
       const fileContent = 'This is a test file.';
 
@@ -111,10 +119,10 @@ describe('FileProcessingService', () => {
 
       const result = await fileProcessingService.findWordInFile(
         wordToFind,
-        filePath,
+        mockFile,
       );
 
-      expect(result).toBe(false);
+      expect(result.found).toBe(false);
     });
   });
 });
